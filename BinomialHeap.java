@@ -10,12 +10,15 @@ public class BinomialHeap {
     public HeapNode min;
     public int treeNum;
 
-
+//
     /**
      * Constructor for the BinomialHeap class.
      * Initializes a new binomial heap with default values.
+     *
+     * Complexity: O(1)
      */
     public BinomialHeap() {
+
         // Initialize the size of the heap (number of elements)
         this.size = 0;
 
@@ -34,6 +37,8 @@ public class BinomialHeap {
      * pre: key > 0
      * <p>
      * Insert (key,info) into the heap and return the newly generated HeapItem.
+     *
+     * Complexity: O(logn)
      */
 
     public HeapItem insert(int key, String info) {
@@ -61,8 +66,17 @@ public class BinomialHeap {
         newHeap.last = node;
         newHeap.min = node;
 
-        // Meld the new heap with the existing heap
-        this.meld(newHeap);
+        if (this.empty() == false && this.size % 2 == 0){
+
+            // No merge needed, Add the new heap with the existing heap with
+            this.insertWithoutMerge(newHeap);
+
+        }
+        else {
+
+            // Meld the new heap with the existing heap
+            this.meld(newHeap);
+        }
 
         // Return the newly generated HeapItem
         return item;
@@ -71,89 +85,99 @@ public class BinomialHeap {
 
     /**
      * Delete the minimal item
+     *
+     * Complexity: O(logn)
      */
 
     public void deleteMin() {
 
-        // Get the HeapNode representing the minimum element
-        HeapNode minNode = this.min;
-        HeapNode next = minNode.next;
+        if (!this.empty()) {
 
-        // Case: Only one tree in the heap
-        if (next == minNode) {
+            // Get the HeapNode representing the minimum element
+            HeapNode minNode = this.min;
+            HeapNode next = minNode.next;
 
-            // If the minimum node has no children, set heap properties to empty
-            if (minNode.child == null) {
-                this.last = null;
-                this.min = null;
-                this.treeNum = 0;
-                this.size = 0;
+            // Case: Only one tree in the heap
+            if (next == minNode) {
+
+                // If the minimum node has no children, set heap properties to empty
+                if (minNode.child == null) {
+                    this.last = null;
+                    this.min = null;
+                    this.treeNum = 0;
+                    this.size = 0;
+                }
+                else {
+                    // Create a new heap for the children of the minimum node
+                    BinomialHeap childHeap = new BinomialHeap();
+                    childHeap.last = minNode.child;
+                    HeapNode child = childHeap.last.next;
+
+                    // Remove parent links for each child and update treeNum
+                    while (child.parent != null) {
+                        child.parent = null;
+                        childHeap.treeNum += 1;
+                        child = child.next;
+                    }
+
+                    // Update heap properties with the new heap of children
+                    this.last = childHeap.last;
+                    this.size -= 1;
+                    this.treeNum = childHeap.treeNum;
+
+                    // Update the minimum element in the heap
+                    this.updateMin();
+                }
             }
             else {
-                // Create a new heap for the children of the minimum node
-                BinomialHeap childHeap = new BinomialHeap();
-                childHeap.last = minNode.child;
-                HeapNode child = childHeap.last.next;
+                // Case: More than one tree in the heap
+                HeapNode prev = minNode;
 
-                // Remove parent links for each child and update treeNum
-                while (child.parent != null) {
-                    child.parent = null;
-                    childHeap.treeNum += 1;
-                    child = child.next;
+                // Find the node before the minimum node in the circular linked list
+                while (prev.next != minNode) {
+                    prev = prev.next;
                 }
 
-                // Update heap properties with the new heap of children
-                this.last = childHeap.last;
+                // Remove the minimum node from the circular linked list
+                prev.next = next;
+                this.treeNum -= 1;
                 this.size -= 1;
-                this.treeNum = childHeap.treeNum;
+
+                // If the minimum node has children, meld them with the heap
+                if (minNode.child != null) {
+                    BinomialHeap childHeap = new BinomialHeap();
+                    childHeap.last = minNode.child;
+                    HeapNode child = childHeap.last.next;
+
+                    // Remove parent links for each child and update treeNum
+                    while (child.parent != null) {
+                        child.parent = null;
+                        childHeap.treeNum += 1;
+                        child = child.next;
+                    }
+
+                    // Meld the heap of children with the current heap
+                    this.meld(childHeap);
+                }
 
                 // Update the minimum element in the heap
                 this.updateMin();
             }
         }
 
-        else {
-            // Case: More than one tree in the heap
-            HeapNode prev = minNode;
-
-            // Find the node before the minimum node in the circular linked list
-            while (prev.next != minNode) {
-                prev = prev.next;
-            }
-
-            // Remove the minimum node from the circular linked list
-            prev.next = next;
-            this.treeNum -= 1;
-            this.size -= 1;
-
-            // If the minimum node has children, meld them with the heap
-            if (minNode.child != null) {
-                BinomialHeap childHeap = new BinomialHeap();
-                childHeap.last = minNode.child;
-                HeapNode child = childHeap.last.next;
-
-                // Remove parent links for each child and update treeNum
-                while (child.parent != null) {
-                    child.parent = null;
-                    childHeap.treeNum += 1;
-                    child = child.next;
-                }
-
-                // Meld the heap of children with the current heap
-                this.meld(childHeap);
-            }
-
-            // Update the minimum element in the heap
-            this.updateMin();
-        }
     }
 
 
     /**
      * Return the minimal HeapItem
+     *
+     * Complexity: O(1)
      */
 
     public HeapItem findMin() {
+
+        if (this.empty())
+            return null;
 
         // Return the HeapItem associated with the minimal node
         return this.min.item;
@@ -162,29 +186,34 @@ public class BinomialHeap {
 
     /**
      * Updates the reference to the minimal HeapItem in the binomial heap.
+     *
+     * Complexity: O(logn)
      */
 
     public void updateMin() {
 
-        // Start with the last node as the initial candidate for the minimum
-        HeapNode y = this.last;
-        HeapNode min = y;
-        y = y.next;
+        if (!this.empty()) {
 
-        // Iterate through the circular linked list to find the new minimum
-        while (y != this.last) {
-            // Compare the key of the current node with the current minimum
-            if (y.item.key < min.item.key) {
-                // Update the minimum node if the current node has a smaller key
-                min = y;
+            // Start with the last node as the initial candidate for the minimum
+            HeapNode y = this.last;
+            HeapNode min = y;
+            y = y.next;
+
+            // Iterate through the circular linked list to find the new minimum
+            while (y != this.last) {
+                // Compare the key of the current node with the current minimum
+                if (y.item.key < min.item.key) {
+                    // Update the minimum node if the current node has a smaller key
+                    min = y;
+                }
+
+                // Move to the next node in the circular linked list
+                y = y.next;
             }
 
-            // Move to the next node in the circular linked list
-            y = y.next;
+            // Update the reference to the minimal HeapItem in the heap
+            this.min = min;
         }
-
-        // Update the reference to the minimal HeapItem in the heap
-        this.min = min;
     }
 
 
@@ -192,9 +221,12 @@ public class BinomialHeap {
      * pre: 0 < diff < item.key
      * <p>
      * Decrease the key of item by diff and fix the heap.
+     *
+     * Complexity: O(logn)
      */
 
     public void decreaseKey(HeapItem item, int diff) {
+
         // Decrease the key of the specified HeapItem by the given difference
         item.key = item.key - diff;
 
@@ -207,6 +239,8 @@ public class BinomialHeap {
 
     /**
      * Performs the heapify-up operation on the binomial heap starting from the specified node.
+     *
+     * Complexity: O(logn)
      */
 
     public void heapifyUp(HeapNode node) {
@@ -231,7 +265,8 @@ public class BinomialHeap {
                 // Move to the parent level for the next iteration
                 x = x.parent;
                 parent = x.parent;
-            } else {
+            }
+            else {
                 // If the current node's key is not smaller than its parent's key, break the loop
                 break;
             }
@@ -240,6 +275,8 @@ public class BinomialHeap {
 
     /**
      * Delete the item from the heap.
+     *
+     * Complexity: O(logn)
      */
 
     public void delete(HeapItem item) {
@@ -254,8 +291,38 @@ public class BinomialHeap {
         this.deleteMin();
     }
 
+
+    /**
+     * Inserts a new binomial heap to the start of the heap without performing merging.
+     *
+     * Complexity: O(1)
+     */
+
+    public void insertWithoutMerge(BinomialHeap newHeap) {
+
+        // Get the heads of the circular linked lists of trees for both heaps
+        HeapNode head = this.last.next;
+        HeapNode newHead = newHeap.last;
+
+        // Connect the last tree of the current heap with the head of the new heap
+        newHead.next = head;
+        this.last.next = newHead;
+
+        // Update the size and number of trees in the current heap
+        this.size++;
+        this.treeNum++;
+
+        // Update the minimum node if necessary
+        if (this.min.item.key > newHead.item.key)
+            this.min = newHead;
+
+    }
+
+
     /**
      * Merges two binomial heaps and returns the head of the resulting merged heap.
+     *
+     * Complexity: O(logn)
      */
 
     public HeapNode merge(BinomialHeap heap1, BinomialHeap heap2) {
@@ -334,6 +401,8 @@ public class BinomialHeap {
 
     /**
      * Meld the heap with heap2
+     *
+     * Complexity: O(logn)
      */
 
     public void meld(BinomialHeap heap2) {
@@ -417,6 +486,8 @@ public class BinomialHeap {
 
     /**
      * Return the number of elements in the heap
+     *
+     * Complexity: O(1)
      */
 
     public int size() {
@@ -428,6 +499,8 @@ public class BinomialHeap {
     /**
      * The method returns true if and only if the heap
      * is empty.
+     *
+     * Complexity: O(1)
      */
 
     public boolean empty() {
@@ -438,50 +511,14 @@ public class BinomialHeap {
 
     /**
      * Return the number of trees in the heap.
+     *
+     * Complexity: O(1)
      */
+
     public int numTrees() {
+
         // Return the treeNum property, representing the number of trees in the binomial heap
         return this.treeNum;
-    }
-
-
-    public void printHeap() {
-        if (empty()) {
-            System.out.println("Heap is empty");
-            return;
-        }
-        System.out.println("Binomial Heap:");
-        HeapNode currentRoot = last;
-        HeapNode stopNode = last.next; // Stop condition for circular list of roots
-        boolean stop = false;
-
-        do {
-            System.out.println("Root: " + currentRoot.item.key);
-            System.out.println("Min: " + this.min.item.key);
-            printTree(currentRoot, 0, currentRoot); // Print the tree rooted at current root
-            currentRoot = currentRoot.next;
-            if (currentRoot == stopNode) {
-                stop = true; // We've visited all roots
-            }
-        } while (!stop);
-    }
-
-    private void printTree(HeapNode node, int depth, HeapNode initialRoot) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < depth; i++) {
-            sb.append("  "); // Adjust spacing for depth
-        }
-        sb.append(node.item.key).append(" [").append(node.rank).append("]");
-
-        System.out.println(sb.toString());
-
-        if (node.child != null) {
-            printTree(node.child, depth + 1, node.child); // Print child recursively
-        }
-
-        if (node.next != node.parent && node.next != null && node.next != initialRoot) {
-            printTree(node.next, depth, initialRoot); // Print sibling recursively until we reach the initial root
-        }
     }
 
 
@@ -505,6 +542,8 @@ public class BinomialHeap {
 
         /**
          * Links two HeapNodes and returns the resulting linked node.
+         *
+         * Complexity: O(1)
          */
 
         public static HeapNode link(HeapNode node1, HeapNode node2) {
@@ -563,6 +602,7 @@ public class BinomialHeap {
                 return node2;
             }
         }
+    }
 
         /**
      * Class implementing an item in a Binomial Heap.
@@ -572,6 +612,8 @@ public class BinomialHeap {
         public HeapNode node;
         public int key;
         public String info;
+
+        public HeapItem() {}
 
         public HeapItem(HeapNode node, int key, String info) {
 
